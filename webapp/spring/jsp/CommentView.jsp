@@ -1,11 +1,14 @@
 <!-- begin CommentView.jsp -->
 
+
   <td style="width:50px;vertical-align:top;padding:15px;">
     <img id="cmt{{cmt.time}}" class="img-circle" style="height:35px;width:35px;" src="<%=ar.retPath%>/users/{{cmt.userKey}}.jpg"
     title="{{cmt.userName}} - {{cmt.user}}">
   </td>
   <td>
     <div class="comment-outer  {{stateClass(cmt)}}">
+
+      <!-- BEGIN Top line of comment section -->
       <div>
         <div class="dropdown" style="float:left" ng-show="cmt.commentType!=6">
           <button class="dropdown-toggle specCaretBtn" type="button"  id="menu"
@@ -13,8 +16,10 @@
             <span class="caret"></span>
           </button>
           <ul class="dropdown-menu" role="menu" aria-labelledby="menu">
-            <li role="presentation" ng-show="cmt.user=='<%ar.writeJS(currentUser);%>'">
-              <a role="menuitem" ng-click="openCommentEditor(item,cmt)">Edit Your {{commentTypeName(cmt)}}</a></li>
+
+            <li role="presentation" ng-show="cmt.user=='<%ar.writeJS(currentUser);%>'" ng-hide="cmt.showEditor">
+              <a role="menuitem" ng-click="cmt.showEditor=true; $parent.checkContact('Comment view')">Edit Your {{commentTypeName(cmt)}}</a></li>
+
             <li role="presentation" ng-show="cmt.commentType==2 || cmt.commentType==3">
               <a role="menuitem" ng-click="openResponseEditor(cmt)">Create/Edit Response:</a></li>
             <li role="presentation" ng-show="cmt.state==11 && cmt.user=='<%ar.writeJS(currentUser);%>'">
@@ -23,7 +28,7 @@
               <a role="menuitem" ng-click="deleteComment(item, cmt)">
               Delete Your {{commentTypeName(cmt)}}</a></li>
             <li role="presentation" ng-show="cmt.state==12">
-              <a role="menuitem" ng-click="closeComment(item, cmt)">Close {{commentTypeName(cmt)}}</a></li>
+              <a role="menuitem" ng-click="Comment(item, cmt)">Close {{commentTypeName(cmt)}}</a></li>
             <li role="presentation" ng-show="cmt.commentType==1">
               <a role="menuitem" ng-click="openCommentCreator(item,1,cmt.time)">
               Reply</a></li>
@@ -34,7 +39,7 @@
               <a role="menuitem" ng-click="openDecisionEditor(item, cmt)">
               Create New Decision</a></li>
             </ul>
-          </div>
+        </div>
 
         <span ng-show="cmt.commentType==1" title="{{stateName(cmt)}} Comment">
           <i class="fa fa-comments-o" style="font-size:130%"></i></span>
@@ -66,12 +71,26 @@
         <span style="float:right;color:green;" title="Due {{cmt.dueDate|date:'medium'}}">{{calcDueDisplay(cmt)}}</span>
         <div style="clear:both"></div>
       </div>
+      <!-- END Top line of comment section -->
       <div ng-show="cmt.state==11">
         Draft {{commentTypeName(cmt)}} needs posting to be seen by others
       </div>
-      <div class="leafContent comment-inner" ng-hide="cmt.meet || cmt.commentType==6">
+
+      <!-- Comment content -->
+      <div ng-hide="cmt.showEditor" class="leafContent comment-inner" ng-hide="cmt.meet || cmt.commentType==6">
         <div ng-bind-html="cmt.html"></div>
       </div>
+
+      <!-- BEGIN Comment editor -->
+      <div ng-show="cmt.user=='<%ar.writeJS(currentUser);%>'">
+        <div ng-show="cmt.showEditor" ng-include="'<%=ar.retPath%>templates/InlineCommentEditor.html'"></div>
+      </div>
+
+      <!-- END Comment editor -->
+      <div ng-hide="">
+
+      </div>
+
       <div ng-show="cmt.meet" class="btn btn-sm btn-default btn-raised"  style="margin:4px;"
            ng-click="navigateToMeeting(cmt.meet)">
         <i class="fa fa-gavel" style="font-size:130%"></i> {{cmt.meet.name}} @ {{cmt.meet.startTime | date}}

@@ -111,6 +111,10 @@ app.controller('myCtrl', function($scope, $http, $modal) {
         errorPanelHandler($scope, serverErr);
     };
 
+    $scope.checkContact = function(message) {
+        console.log("NoteZoom scope reached - " + message);
+    }
+
     $scope.fixUpChoices = function() {
         $scope.noteInfo.comments.forEach( function(cmt) {
             if (!cmt.choices || cmt.choices.length==0) {
@@ -138,7 +142,7 @@ app.controller('myCtrl', function($scope, $http, $modal) {
     $scope.saveEdits = function(fields) {
         var postURL = "noteHtmlUpdate.json?nid="+$scope.noteInfo.id;
         var rec = {};
-        rec.id = $scope.noteInfo.id
+        rec.id = $scope.noteInfo.id;
         rec.universalid = $scope.noteInfo.universalid;
         fields.forEach( function(fieldName) {
             rec[fieldName] = $scope.noteInfo[fieldName];
@@ -468,7 +472,6 @@ app.controller('myCtrl', function($scope, $http, $modal) {
         $scope.openCommentEditor({}, newComment);
     }
 
-
     $scope.openCommentEditor = function (itemNotUsed, cmt) {
         var modalInstance = $modal.open({
             animation: true,
@@ -634,6 +637,7 @@ app.controller('myCtrl', function($scope, $http, $modal) {
 	}
 	
     $scope.getFullDoc = function(docId) {
+	    console.log("Getting doc with docId" + docId);
         var doc = {};
         $scope.attachmentList.filter( function(item) {
             if (item.universalid == docId) {
@@ -668,6 +672,7 @@ app.controller('myCtrl', function($scope, $http, $modal) {
 
         attachModalInstance.result
         .then(function (docList) {
+            console.log("Saving edits to the docList")
             $scope.noteInfo.docList = docList;
             $scope.saveEdits(['docList']);
         }, function () {
@@ -700,6 +705,93 @@ app.controller('myCtrl', function($scope, $http, $modal) {
             //cancel action - nothing really to do
         });
     };
+
+
+
+    // BEGIN Comment specific methods
+
+    $scope.commentOpenAttachDocument = function (cmt) {
+        var attachModalInstance = $modal.open({
+            animation: true,
+            templateUrl: '../../../templates/AttachDocument.html?s=a',
+            controller: 'AttachDocumentCtrl',
+            size: 'lg',
+            resolve: {
+                docList: function () {
+                    return JSON.parse(JSON.stringify(cmt.docList));
+                },
+                attachmentList: function() {
+                    return $scope.attachmentList;
+                },
+                docSpaceURL: function() {
+                    return $scope.docSpaceURL;
+                }
+            }
+        });
+
+        attachModalInstance.result
+            .then(function (docList) {
+                cmt.docList = docList;
+            }, function () {
+                //cancel action - nothing really to do
+            });
+    };
+
+    $scope.openInlineCommentCreator = function(itemNotUsed, type, replyTo, defaultBody) {
+        console.log("openInlineCommentCreator");
+
+        var newComment = {};
+        newComment.time = new Date().getTime();
+        newComment.dueDate = (new Date()).getTime() + (7*24*60*60*1000);
+        newComment.commentType = type;
+        newComment.state = 11;
+        newComment.isNew = false;
+        newComment.showEditor = true;
+        newComment.user = "<%ar.writeJS(currentUser);%>";
+        newComment.userName = "<%ar.writeJS(currentUserName);%>";
+        newComment.userKey = "<%ar.writeJS(currentUserKey);%>";
+        if (replyTo) {
+            newComment.replyTo = replyTo;
+        }
+        if (defaultBody) {
+            newComment.html = defaultBody;
+        }
+        $scope.saveNewInlineComment({}, newComment);
+    };
+
+    $scope.openInlineCommentEditor = function (itemNotUsed, cmt) {
+        return JSON.parse(JSON.stringify(cmt));
+    }
+
+    $scope.saveNewInlineComment = function (itemNotUsed, cmt) {
+        if (!cmt.docList) {
+            cmt.docList = [];
+        }
+        if (!cmt.notify) {
+            cmt.notify = [];
+        }
+
+        cmt.notify.forEach( function(item) {
+            if (!item.uid) {
+                item.uid = item.name;
+            }
+        });
+
+        dummyDate1 = new Date();
+        if (cmt.dueDate>0) {
+            dummyDate1 = new Date(cmt.dueDate);
+        }
+
+        console.log("SAVING COMMENT: ", cmt);
+        cmt.dueDate = dummyDate1.getTime();
+
+        $scope.updateComment(cmt);
+    };
+
+
+
+    // END Comment specific methods
+
     
     $scope.receiveTopicRecord($scope.noteInfo);
 
@@ -709,6 +801,7 @@ app.controller('myCtrl', function($scope, $http, $modal) {
 </script>
 <script src="../../../jscript/AllPeople.js"></script>
 
+<!-- BEGIN NoteZoom.jsp HTML-->
 <div ng-app="myApp" ng-controller="myCtrl">
 
 <%@include file="ErrorPanel.jsp"%>
@@ -798,6 +891,7 @@ app.controller('myCtrl', function($scope, $http, $modal) {
     	<div  ng-bind-html="noteInfo.html"></div>
     </div>
 <%if (isLoggedIn) { %>
+
     <div class="leafContent" ng-show="isEditing">
         <input type="text" class="form-control" ng-model="noteInfo.subject">
         <div style="height:15px"></div>
@@ -806,6 +900,9 @@ app.controller('myCtrl', function($scope, $http, $modal) {
         <button class="btn btn-primary btn-raised" ng-click="saveEdit()">Save</button>
         <button class="btn btn-primary btn-raised" ng-click="cancelEdit()">Cancel</button>
     </div>
+
+
+
 <% } %>
 
     <div style="color:lightgrey;font-style:italic">Last modified: {{noteInfo.modTime|date}}</div>
@@ -888,11 +985,11 @@ app.controller('myCtrl', function($scope, $http, $modal) {
     <td>
     <div ng-show="canUpdate">
         <div style="margin:20px;">
-            <button ng-click="openCommentCreator({},1)" class="btn btn-default btn-raised">
+            <button ng-click="openInlineCommentCreator({},1)" class="btn btn-default btn-raised">
                 Create New <i class="fa fa-comments-o"></i> Comment</button>
-            <button ng-click="openCommentCreator({},2)" class="btn btn-default btn-raised">
+            <button ng-click="openInlineCommentCreator({},2)" class="btn btn-default btn-raised">
                 Create New <i class="fa fa-star-o"></i> Proposal</button>
-            <button ng-click="openCommentCreator({},3)" class="btn btn-default btn-raised">
+            <button ng-click="openInlineCommentCreator({},3)" class="btn btn-default btn-raised">
                 Create New <i class="fa  fa-question-circle"></i> Round</button>
         </div>
     </div>
@@ -921,7 +1018,9 @@ app.controller('myCtrl', function($scope, $http, $modal) {
     
 
 </div>
+<!-- END NoteZoom.jsp HTML-->
 
+<script src="<%=ar.retPath%>templates/InlineCommentEditor.js"></script>
 <script src="<%=ar.retPath%>templates/CommentModal.js"></script>
 <script src="<%=ar.retPath%>templates/ResponseModal.js"></script>
 <script src="<%=ar.retPath%>templates/OutcomeModal.js"></script>
