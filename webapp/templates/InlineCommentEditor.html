@@ -61,7 +61,7 @@
             </div>
             <div class="col-md-8 text-right">
                 <button class="btn btn-default btn-raised" ng-click="$parent.updateComment(cmt)">Save</button>
-                <button ng-click="postIt(); cmt.showEditor=false" class="btn btn-primary btn-raised" ng-show="cmt.state<=11">
+                <button ng-click="$parent.postComment(item, cmt); cmt.showEditor=false" class="btn btn-primary btn-raised" ng-show="cmt.state<=11">
                     Post</button>
             </div>
         </div>
